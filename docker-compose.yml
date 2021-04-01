@@ -1,0 +1,44 @@
+version: "3.7"
+
+services:
+  etl:
+    build:
+      dockerfile: ./.docker/etl/Dockerfile
+      context: .
+    image: haungi/etl-script
+    container_name: etl-script
+    entrypoint: dockerize -wait tcp://db:3306 -timeout 40s
+    # entrypoint: dockerize -template /templates/.env:.env -wait tcp://db:3306 -timeout 40s /entrypoint.sh
+    environment:
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_USERNAME: root
+      DB_PASSWORD: root
+      DB_NAME: etlscript_db
+    volumes:
+      - ./:/usr/src/etl/app
+    networks:
+      - etl-network
+    depends_on:
+      - db
+
+  db:
+    build:
+      dockerfile: ./.docker/db/Dockerfile
+      context: .
+    image: haungi/etl-script-db
+    container_name: etl-script-db
+    restart: always
+    tty: true
+    ports:
+      - "33007:3306"
+    volumes:
+      - ./.docker/data:/var/lib/mysql
+    environment:
+      - MYSQL_DATABASE=etlscript_db
+      - MYSQL_ROOT_PASSWORD=root
+    networks: 
+      - etl-network
+networks:
+    etl-network:
+        driver: bridge
